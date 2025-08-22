@@ -267,7 +267,7 @@ class MegaOSINTTool:
         
         # Выбор категорий баз для поиска
         if db_category == 'russian':
-            dbs_to_search = [k for k in self.mega_databases.keys() if any(x in k for x in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП']))]
+            dbs_to_search = [k for k in self.mega_databases.keys() if any(x in k for x in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП'])]
         elif db_category == 'international':
             dbs_to_search = [k for k in self.mega_databases.keys() if k not in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП']]
         else:

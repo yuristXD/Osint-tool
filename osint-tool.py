@@ -400,3 +400,7 @@ if __name__ == "__main__":
     except ImportError:
         print("Устанавливаем colorama...")
         subprocess.run([sys.executable, "-m", "pip"])
+        import colorama 
+        colorama.init(autoreset=True)
+
+    main()

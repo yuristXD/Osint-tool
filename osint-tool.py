@@ -399,4 +399,4 @@ if __name__ == "__main__":
         import colorama
     except ImportError:
         print("Устанавливаем colorama...")
-        subprocess.run([sys.executable, "-m", "pip"
+        subprocess.run([sys.executable, "-m", "pip"])

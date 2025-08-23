@@ -13,6 +13,12 @@ import time
 from bs4 import BeautifulSoup
 from urllib.parse import urlencode, quote
 from datetime import datetime
+import colorama
+from colorama import Fore, Style, Back
+import subprocess
+
+# Инициализация colorama
+colorama.init(autoreset=True)
 
 class MegaOSINTTool:
     def __init__(self):
@@ -21,7 +27,7 @@ class MegaOSINTTool:
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
         })
         
-        # МЕГА БАЗА ДАННЫХ - все предоставленные ресурсы
+        # МЕГА БАЗА ДАННЫХ - ВСЕ ПРЕДОСТАВЛЕННЫЕ РЕСУРСЫ
         self.mega_databases = {
             # 🇷🇺 Российские государственные реестры
             'ФНС ИНН физлица': 'https://service.nalog.ru/inn.do',
@@ -62,6 +68,7 @@ class MegaOSINTTool:
             'Реестр студентов Москвы': 'https://www.mos.ru/karta-moskvicha/services-proverka-grazhdanina-v-reestre-studentov/',
             'Федеральное имущество': 'https://esugi.rosim.ru',
             'Реестр операторов персданных': 'https://pd.rkn.gov.ru/operators-registry',
+            'Единый реестр банкротств': 'https://bankrot.fedresurs.ru/',
             
             # 🔍 Поиск контрагента
             'ФНС задолженность': 'https://service.nalog.ru/zd.do',
@@ -145,8 +152,48 @@ class MegaOSINTTool:
             'K-Agent': 'https://www.k-agent.ru/',
             'IS-Zakupki': 'https://www.is-zakupki.ru/',
             'SaleSpring': 'https://salespring.ru/',
-            'Multistat': 'https://www.multistat.ru/'
+            'Multistat': 'https://www.multistat.ru/',
+            
+            # 🔐 Дополнительные сервисы
+            'Роскомнадзор операторы': 'https://rkn.gov.ru/mass-communications/reestr/',
+            'Китайские компании': 'https://www.chinacheckup.com/',
+            'Dun and Bradstreet': 'https://www.dnb.com/products.html',
+            'Украинские базы': 'https://www.imena.ua/blog/ukraine-database/',
+            'Нотариальная система': 'https://www.fciit.ru/',
+            'Городская статистика': 'https://gradoteka.ru/',
+            'Таможенные данные': 'https://www.tks.ru/db/',
+            'Антикриминальная система': 'https://www.aips-ariadna.com/',
+            'Реестр деклараций': 'https://188.254.71.82/rds_ts_pub/',
+            'Сообщество безопасников': 'https://iskr-a.com/',
+            'Российский центр': 'https://www.ruscentr.com/',
+            'Правовая система': 'https://pravo.fso.gov.ru/',
+            'Тендерный портал': 'https://www.tenderguru.ru/',
+            'Биржа контактов': 'https://salespring.ru/'
         }
+
+    def clear_screen(self):
+        """Очистка экрана с стилизацией"""
+        os.system('clear' if os.name == 'posix' else 'cls')
+        print(f"{Fore.RED}{'='*80}")
+        print(f"{Fore.RED}{Back.BLACK}    ██████╗ ███████╗██╗███╗   ██╗████████╗")
+        print(f"{Fore.RED}{Back.BLACK}    ██╔═══██╗██╔════╝██║████╗  ██║╚══██╔══╝")
+        print(f"{Fore.RED}{Back.BLACK}    ██║   ██╗███████╗██║██╔██╗ ██║   ██║   ")
+        print(f"{Fore.RED}{Back.BLACK}    ██║   ██║╚════██║██║██║╚██╗██║   ██║   ")
+        print(f"{Fore.RED}{Back.BLACK}    ╚██████╔╝███████║██║██║ ╚████║   ██║   ")
+        print(f"{Fore.RED}{Back.BLACK}     ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═══╝   ╚═╝   ")
+        print(f"{Fore.RED}{'='*80}")
+        print(f"{Fore.RED}{Style.BRIGHT}    MEGA OSINT SEARCH TOOL v2.0")
+        print(f"{Fore.RED}    🔍 {len(self.mega_databases)}+ баз данных | 🚀 Автоматический поиск")
+        print(f"{Fore.RED}    ⚡ Полный пробив | 🛡️ Анонимный режим")
+        print(f"{Fore.RED}{'='*80}")
+
+    def show_loading(self, message):
+        """Показать анимацию загрузки"""
+        print(f"\n{Fore.RED}🔄 {message}", end='', flush=True)
+        for i in range(3):
+            time.sleep(0.3)
+            print(f"{Fore.RED}.", end='', flush=True)
+        print()
 
     def search_database(self, db_name, query, query_type):
         """Поиск в конкретной базе данных"""
@@ -155,7 +202,6 @@ class MegaOSINTTool:
         if db_name in self.mega_databases:
             base_url = self.mega_databases[db_name]
             try:
-                # Специфичные параметры для разных типов запросов
                 params = {}
                 
                 if query_type == 'inn':
@@ -182,7 +228,6 @@ class MegaOSINTTool:
                         soup = BeautifulSoup(response.text, 'html.parser')
                         results['title'] = soup.title.string if soup.title else None
                         
-                        # Извлекаем потенциально полезную информацию
                         text_content = soup.get_text()
                         results['content_preview'] = ' '.join(text_content[:300].split()) + '...'
                         
@@ -199,25 +244,25 @@ class MegaOSINTTool:
 
     def mass_search(self, query, query_type, selected_dbs=None):
         """Массовый поиск по всем базам данных"""
-        print(f"\n🔍 Поиск '{query}' ({query_type}) по базам данных...")
-        print("=" * 70)
+        print(f"\n{Fore.RED}🔍 Поиск '{query}' ({query_type}) по базам данных...")
+        print(f"{Fore.RED}{'='*70}")
         
         all_results = {}
         
-        databases_to_search = selected_dbs if selected_dbs else self.mega_databases.keys()
+        databases_to_search = selected_dbs if selected_dbs else list(self.mega_databases.keys())[:50]  # Ограничиваем для теста
         
         for db_name in databases_to_search:
-            print(f"📊 {db_name}...")
+            print(f"{Fore.RED}📊 {db_name}...", end=' ', flush=True)
             result = self.search_database(db_name, query, query_type)
             
             if 'error' not in result or result.get('success'):
                 all_results[db_name] = result
-                status = "✅" if result.get('success') else "⚠️"
-                print(f"   {status} {result.get('status', 'N/A')} - {result.get('url', '')}")
+                status = f"{Fore.GREEN}✅" if result.get('success') else f"{Fore.YELLOW}⚠️"
+                print(f"{status} {result.get('status', 'N/A')}")
             else:
-                print(f"   ❌ Ошибка: {result.get('error', 'Unknown')}")
+                print(f"{Fore.RED}❌ Ошибка: {result.get('error', 'Unknown')}")
             
-            time.sleep(0.5)  # Задержка между запросами
+            time.sleep(0.3)
         
         return all_results
 
@@ -225,59 +270,42 @@ class MegaOSINTTool:
         """Автоматическое определение типа запроса"""
         query = str(query).strip()
         
-        # ИНН (10-12 цифр)
         if re.match(r'^\d{10,12}$', query):
             return 'inn', 'ИНН'
-        
-        # Водительские права (серия номер)
         elif re.match(r'^\d{2} ?\d{2} ?\d{6}$', query):
             return 'driver_license', 'Водительское удостоверение'
-        
-        # Паспорт (серия номер)
         elif re.match(r'^\d{4} ?\d{6}$', query):
             return 'passport', 'Паспорт'
-        
-        # Email
         elif '@' in query and re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', query):
             return 'email', 'Email'
-        
-        # Телефон
         elif re.match(r'^\+?[78]?[ -]?\(?\d{3}\)?[ -]?\d{3}[ -]?\d{2}[ -]?\d{2}$', query.replace(' ', '')):
             return 'phone', 'Телефон'
-        
-        # Username (только буквы, цифры, точки, подчеркивания)
         elif re.match(r'^[a-zA-Z0-9._-]+$', query) and len(query) > 2:
             return 'username', 'Username'
-        
-        # Компания (содержит ООО, АО, ИП и т.д.)
         elif re.search(r'(ООО|АО|ЗАО|ОАО|ИП|ПАО|НКО)', query, re.IGNORECASE):
             return 'company', 'Компания'
-        
-        # ФИО (2-3 слова, первая буква заглавная)
         elif len(query.split()) in [2, 3] and all(word[0].isupper() for word in query.split() if word):
             return 'person', 'ФИО'
-        
         else:
             return 'general', 'Общий запрос'
 
     def comprehensive_search(self, query, db_category=None):
         """Комплексный поиск по всем базам"""
         query_type, type_name = self.auto_detect_query_type(query)
-        print(f"🎯 Обнаружен тип: {type_name}")
+        print(f"{Fore.RED}🎯 Обнаружен тип: {Fore.WHITE}{type_name}")
         
-        # Выбор категорий баз для поиска
         if db_category == 'russian':
             dbs_to_search = [k for k in self.mega_databases.keys() if any(x in k for x in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП'])]
         elif db_category == 'international':
             dbs_to_search = [k for k in self.mega_databases.keys() if k not in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП']]
         else:
-            dbs_to_search = None
+            dbs_to_search = list(self.mega_databases.keys())[:30]  # Ограничение для первого запуска
         
+        self.show_loading("Сканирование баз данных")
         results = self.mass_search(query, query_type, dbs_to_search)
         
-        # Сохранение результатов
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"mega_osint_search_{timestamp}.json"
+        filename = f"osint_search_{timestamp}.json"
         
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump({
@@ -288,55 +316,38 @@ class MegaOSINTTool:
                 'results': results
             }, f, indent=2, ensure_ascii=False, default=str)
         
-        print(f"\n💾 Результаты сохранены в: {filename}")
+        print(f"\n{Fore.GREEN}💾 Результаты сохранены в: {Fore.WHITE}{filename}")
         
-        # Вывод статистики
         success_count = sum(1 for r in results.values() if r.get('success'))
-        print(f"📈 Статистика: {success_count}/{len(results)} баз ответили успешно")
+        print(f"{Fore.RED}📈 Статистика: {Fore.WHITE}{success_count}/{len(results)} баз ответили успешно")
         
         return results
 
-    def show_categories(self):
-        """Показать категории баз данных"""
-        categories = {
-            '🇷🇺 Российские гос. реестры': [k for k in self.mega_databases if any(x in k for x in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП'])],
-            '🌐 Международные OSINT': [k for k in self.mega_databases if k not in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП']],
-            '📊 Бизнес и компании': [k for k in self.mega_databases if any(x in k for x in ['компан', 'бизнес', 'реестр', 'база'])],
-            '👤 Персональные данные': [k for k in self.mega_databases if any(x in k for x in ['паспорт', 'водитель', 'ФИО', 'ИНН'])]
-        }
-        
-        for category, dbs in categories.items():
-            print(f"\n{category} ({len(dbs)}):")
-            for db in dbs[:5]:  # Показываем первые 5
-                print(f"  • {db}")
-            if len(dbs) > 5:
-                print(f"  • ... и еще {len(dbs)-5}")
+    def show_menu(self):
+        """Показать главное меню"""
+        print(f"\n{Fore.RED}{'='*60}")
+        print(f"{Fore.RED}{Style.BRIGHT}ВЫБЕРИТЕ ОПЦИЮ:")
+        print(f"{Fore.RED}{'='*60}")
+        print(f"{Fore.RED}1. 🔎 Комплексный поиск по всем базам")
+        print(f"{Fore.RED}2. 🇷🇺 Только российские гос. реестры")
+        print(f"{Fore.RED}3. 🌐 Только международные OSINT базы")
+        print(f"{Fore.RED}4. 📋 Показать все базы данных")
+        print(f"{Fore.RED}5. 🗂️ Показать категории")
+        print(f"{Fore.RED}6. 💾 Экспорт базы данных")
+        print(f"{Fore.RED}7. 🚪 Выход")
+        print(f"{Fore.RED}{'='*60}")
 
 def main():
-    print("""
-    🚀 MEGA OSINT SEARCH TOOL
-    =========================
-    🔍 200+ баз данных | Автоматический поиск | Полный пробив
-    """)
-    
     tool = MegaOSINTTool()
+    tool.clear_screen()
     
     while True:
-        print("\n" + "="*60)
-        print("Выберите опцию:")
-        print("1. 🔎 Комплексный поиск по всем базам")
-        print("2. 🇷🇺 Только российские гос. реестры")
-        print("3. 🌐 Только международные OSINT базы")
-        print("4. 📋 Показать все базы данных")
-        print("5. 🗂️ Показать категории")
-        print("6. 💾 Экспорт базы данных")
-        print("7. 🚪 Выход")
-        print("="*60)
+        tool.show_menu()
         
-        choice = input("Ваш выбор (1-7): ").strip()
+        choice = input(f"{Fore.RED}Ваш выбор (1-7): ").strip()
         
         if choice in ['1', '2', '3']:
-            query = input("Введите запрос (ИНН, телефон, email, ФИО и т.д.): ").strip()
+            query = input(f"{Fore.RED}Введите запрос (ИНН, телефон, email, ФИО и т.д.): ").strip()
             if query:
                 if choice == '1':
                     tool.comprehensive_search(query)
@@ -346,25 +357,46 @@ def main():
                     tool.comprehensive_search(query, 'international')
         
         elif choice == '4':
-            print(f"\n📊 ВСЕ БАЗЫ ДАННЫХ ({len(tool.mega_databases)}):")
-            for i, (name, url) in enumerate(tool.mega_databases.items(), 1):
-                print(f"{i:3d}. {name}: {url}")
+            print(f"\n{Fore.RED}📊 ВСЕ БАЗЫ ДАННЫХ ({len(tool.mega_databases)}):")
+            for i, (name, url) in enumerate(list(tool.mega_databases.items())[:20], 1):
+                print(f"{Fore.RED}{i:3d}. {name}")
+            print(f"{Fore.RED}   ... и еще {len(tool.mega_databases)-20} баз")
         
         elif choice == '5':
-            tool.show_categories()
+            print(f"\n{Fore.RED}🗂️ КАТЕГОРИИ БАЗ ДАННЫХ:")
+            categories = {
+                '🇷🇺 Российские гос. реестры': [k for k in tool.mega_databases if any(x in k for x in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП'])],
+                '🌐 Международные OSINT': [k for k in tool.mega_databases if k not in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП']],
+                '📊 Бизнес и компании': [k for k in tool.mega_databases if any(x in k.lower() for x in ['бизнес', 'компан', 'реестр'])],
+                '👤 Персональные данные': [k for k in tool.mega_databases if any(x in k.lower() for x in ['паспорт', 'водитель', 'фио', 'инн'])]
+            }
+            
+            for category, dbs in categories.items():
+                print(f"\n{Fore.RED}{category} ({len(dbs)}):")
+                for db in dbs[:3]:
+                    print(f"{Fore.RED}  • {db}")
+                if len(dbs) > 3:
+                    print(f"{Fore.RED}  • ... и еще {len(dbs)-3}")
         
         elif choice == '6':
-            # Экспорт базы данных в JSON
             with open('osint_databases_export.json', 'w', encoding='utf-8') as f:
                 json.dump(tool.mega_databases, f, indent=2, ensure_ascii=False)
-            print("💾 База данных экспортирована в osint_databases_export.json")
+            print(f"{Fore.GREEN}💾 База данных экспортирована в osint_databases_export.json")
         
         elif choice == '7':
-            print("До свидания! 👋")
+            print(f"\n{Fore.RED}👋 До свидания!")
             break
         
         else:
-            print("Неверный выбор. Попробуйте снова.")
+            print(f"{Fore.RED}❌ Неверный выбор. Попробуйте снова.")
+        
+        input(f"\n{Fore.RED}Нажмите Enter для продолжения...")
+        tool.clear_screen()
 
 if __name__ == "__main__":
-    main()
+    # Убедимся что colorama установлена
+    try:
+        import colorama
+    except ImportError:
+        print("Устанавливаем colorama...")
+        subprocess.run([sys.executable, "-m", "pip"

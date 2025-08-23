@@ -11,11 +11,14 @@ import socket
 import re
 import time
 from bs4 import BeautifulSoup
-from urllib.parse import urlencode, quote
+from urllib.parse import urlencode, quote, urlparse
 from datetime import datetime
 import colorama
 from colorama import Fore, Style, Back
 import subprocess
+import webbrowser
+import random
+import threading
 
 # Инициализация colorama
 colorama.init(autoreset=True)
@@ -27,423 +30,332 @@ class MegaOSINTTool:
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
         })
         
-        # МЕГА БАЗА ДАННЫХ - ВСЕ ПРЕДОСТАВЛЕННЫЕ РЕСУРСЫ
-        self.mega_databases = {
-            # 🇷🇺 Российские государственные реестры
-            'ФНС ИНН физлица': 'https://service.nalog.ru/inn.do',
-            'Реестр банкротств': 'https://bankrot.fedresurs.ru/',
-            'ЕГРЮЛ': 'https://egrul.nalog.ru/',
-            'Проверка водительского удостоверения': 'https://xn--90adear.xn--p1ai/check/driver/',
-            'Счетная палата': 'https://results.audit.gov.ru/',
-            'Судебные акты': 'https://sudact.ru/',
-            'ЦБ РФ кредитные организации': 'https://www.cbr.ru/credit/main.asp',
-            'Блокировка счетов': 'https://service.nalog.ru/bi.do',
-            'Проверка паспортов ФМС': 'https://services.fms.gov.ru/',
-            'Недобросовестные поставщики': 'https://zakupki.gov.ru/223/dishonest/public/supplier-search.html',
-            'Реестр террористов': 'https://fedsfm.ru/documents/terrorists-catalog-portal-act',
-            'Черный список строителей': 'https://www.stroi-baza.ru/forum/index.php?showforum=46',
-            'Решения судов': 'https://xn--90afdbaav0bd1afy6eub5d.xn--p1ai/',
-            'Центр долгов': 'https://www.centerdolgov.ru/',
-            'Арбитражный суд': 'https://ras.arbitr.ru/',
-            'Росреестр': 'https://rosreestr.ru/wps/portal/cc_information_online',
-            'Суды общей юрисдикции': 'https://www.gcourts.ru/',
-            'Раскрытие информации': 'https://www.e-disclosure.ru/',
-            'ФАС недобросовестные поставщики': 'https://rnp.fas.gov.ru/',
-            'Услуги Росреестра': 'https://rosreestr.ru/wps/portal/p/cc_present/EGRN_1',
-            'Нотариусы': 'https://www.notary.ru/notary/bd.html',
-            'ЧОП': 'https://allchop.ru/',
-            'Расшифровка кодов': 'https://enotpoiskun.ru/tools/codedecode/',
-            'Расшифровка VIN': 'https://www.vinformer.su/ident/vin.php?setLng=ru',
-            'Розыск преступников': 'https://fssprus.ru/iss/suspect_info',
-            'Реестр коллекторов': 'https://fssprus.ru/gosreestr_jurlic/',
-            'Открытые данные ФССП': 'https://opendata.fssprus.ru/',
-            'Саморегулируемые организации': 'https://sro.gosnadzor.ru/',
-            'Реестр залогов': 'https://www.reestr-zalogov.ru/search/index',
-            'Розыск МВД': 'https://мвд.рф/wanted',
-            'Реестр студентов Москвы': 'https://www.mos.ru/karta-moskvicha/services-proverka-grazhdanina-v-reestre-studentov/',
-            'Федеральное имущество': 'https://esugi.rosim.ru',
-            'Реестр операторов персданных': 'https://pd.rkn.gov.ru/operators-registry',
-            'Единый реестр банкротств': 'https://bankrot.fedresurs.ru/',
-            
-            # 🔍 Поиск контрагента
-            'ФНС задолженность': 'https://service.nalog.ru/zd.do',
-            'ФНС адреса юрлиц': 'https://service.nalog.ru/addrfind.do',
-            'ФНС госрегистрация': 'https://service.nalog.ru/uwsfind.do',
-            'ФНС дисквалифицированные': 'https://service.nalog.ru/disqualified.do',
-            'ФНС дисквалифицированные руководители': 'https://service.nalog.ru/disfind.do',
-            'ФНС невозможность руководства': 'https://service.nalog.ru/svl.do',
-            'ФНС учредители нескольких юрлиц': 'https://service.nalog.ru/mru.do',
-            'Федресурс': 'https://fedresurs.ru/',
-            
-            # 🌐 Международные OSINT базы
-            'Namechk (username)': 'https://namechk.com/',
-            'HaveIBeenPwned (email)': 'https://haveibeenpwned.com/',
-            'Hacked-Emails': 'https://hacked-emails.com/',
-            'GhostProject': 'https://ghostproject.fr/',
-            'WeLeakInfo': 'https://weleakinfo.com/',
-            'Pipl': 'https://pipl.com/',
-            'LeakedSource': 'https://leakedsource.ru/',
-            'PhoneNumber': 'https://phonenumber.to',
-            'OSINT Framework': 'https://osintframework.com/',
-            'FindClone': 'https://findclone.ru/',
-            'UnwiredLabs (базовые станции)': 'https://unwiredlabs.com',
-            'Xinit базовые станции': 'https://xinit.ru/bs/',
-            'PhotoMap по геометкам': 'https://sanstv.ru/photomap',
-            
-            # 🚢 Транспорт и отслеживание
-            'MarineTraffic': 'https://www.marinetraffic.com',
-            'SeaTracker': 'https://seatracker.ru/ais.php',
-            'ShipFinder': 'https://shipfinder.co/',
-            'PlaneFinder': 'https://planefinder.net/',
-            'RadarBox': 'https://www.radarbox24.com/',
-            'FlightAware': 'https://de.flightaware.com/',
-            'FlightRadar24': 'https://www.flightradar24.com',
-            
-            # 📊 Дополнительные бизнес-базы
-            'Роскомнадзор реестры': 'https://rkn.gov.ru/mass-communications/reestr/',
-            'ЕГРЮЛ международный': 'https://www.egrul.ru/',
-            'СКРИН раскрытие информации': 'https://disclosure.skrin.ru',
-            'Прайм-ТАСС': 'https://1prime.ru/docs/product/disclosure.html',
-            'ЦБ кредитные истории': 'https://www.cbr.ru/',
-            'Росстат отчетность': 'https://www.gks.ru/accounting_report',
-            'Таможенные базы': 'https://www.tks.ru/db/',
-            'Каталог предприятий': 'https://tipodop.ru/',
-            'CatalogFactory': 'https://www.catalogfactory.org/',
-            'Право.ру': 'https://pravo.ru/',
-            'AzStatus': 'https://azstatus.ru/',
-            'Seldon закупки': 'https://seldon.ru/',
-            'ТПП надежные партнеры': 'https://www.reestrtpprf.ru/',
-            'Кронос проверка': 'https://croinform.ru/index.php?page=index',
-            'Госзакупки': 'https://www.zakupki.gov.ru/epz/main/public/home.html',
-            'Rostender': 'https://rostender.info/',
-            'Правовая информация': 'https://pravo.fso.gov.ru/',
-            'BicoTender': 'https://www.bicotender.ru/',
-            'ВШЭ архив': 'https://sophist.hse.ru/',
-            'TenderGuru': 'https://www.tenderguru.ru/',
-            'MoscowBase': 'https://www.moscowbase.ru/',
-            'Credinform ГЛОБАС': 'https://www.credinform.ru/ru-RU/globas',
-            'ActInfo справочник': 'https://www.actinfo.ru/',
-            'Правосудие': 'https://www.sudrf.ru/',
-            'Право.ру документы': 'https://docs.pravo.ru/',
-            'Fedresurs факты деятельности': 'https://www.fedresurs.ru/',
-            'FindSMI СМИ': 'https://www.findsmi.ru/',
-            'OpenGovData': 'https://hub.opengovdata.ru/',
-            'Ruward рейтинги': 'https://www.ruward.ru/',
-            'B2B-Energo': 'https://www.b2b-energo.ru/firm_dossier/',
-            'OpenData': 'https://opengovdata.ru/',
-            'Бир-аналитик': 'https://bir.1prime.ru/',
-            'Prima-Inform': 'https://www.prima-inform.ru/',
-            'Integrum': 'https://www.integrum.ru/',
-            'Spark-Interfax': 'https://www.spark-interfax.ru/',
-            'Fira': 'https://fira.ru/',
-            'SKRIN': 'https://www.skrin.ru/',
-            'Magelan тендеры': 'https://www.magelan.pro/',
-            'Контрагент': 'https://www.kontragent.info/',
-            'IST-Budget': 'https://www.ist-budget.ru/',
-            'Vuve': 'https://www.vuve.su/',
-            'Disclosure': 'https://www.disclosure.ru/index.shtml',
-            'Mosstat': 'https://www.mosstat.ru/index.html',
-            'Torg94': 'https://www.torg94.ru/',
-            'K-Agent': 'https://www.k-agent.ru/',
-            'IS-Zakupki': 'https://www.is-zakupki.ru/',
-            'SaleSpring': 'https://salespring.ru/',
-            'Multistat': 'https://www.multistat.ru/',
-            
-            # 🔐 Дополнительные сервисы
-            'Рокомнадзор операторы': 'https://rkn.gov.ru/mass-communications/reestr/',
-            'Китайские компании': 'https://www.chinacheckup.com/',
-            'Dun and Bradstreet': 'https://www.dnb.com/products.html',
-            'Украинские базы': 'https://www.imena.ua/blog/ukraine-database/',
-            'Нотариальная система': 'https://www.fciit.ru/',
-            'Городская статистика': 'https://gradoteka.ru/',
-            'Таможенные данные': 'https://www.tks.ru/db/',
-            'Антикриминальная система': 'https://www.aips-ariadna.com/',
-            'Реестр деклараций': 'https://188.254.71.82/rds_ts_pub/',
-            'Сообщество безопасников': 'https://iskr-a.com/',
-            'Российский центр': 'https://www.ruscentr.com/',
-            'Правовая система': 'https://pravo.fso.gov.ru/',
-            'Тендерный портал': 'https://www.tenderguru.ru/',
-            'Биржа контактов': 'https://salespring.ru/'
+        # Полная база данных OSINT ресурсов
+        self.resources = {
+            'государственные_сервисы_россии': [
+                'https://service.nalog.ru/inn.do - сервис определения ИНН физического лица',
+                'http://bankrot.fedresurs.ru/ - единый федеральный реестр сведений о банкротстве',
+                'http://egrul.nalog.ru/ - сведения из ЕГРЮЛ',
+                'https://xn--90adear.xn--p1ai/check/driver/ - проверка водительского удостоверения',
+                'http://results.audit.gov.ru/ - портал открытых данных Счетной палаты РФ',
+                'http://sudact.ru/ - судебные и нормативные акты',
+                'http://www.cbr.ru/credit/main.asp - справочник по кредитным организациям ЦБ РФ',
+                'https://service.nalog.ru/bi.do - проверка блокировки банковских счетов',
+                'http://services.fms.gov.ru/ - проверка действительности паспортов ФМС',
+                'http://zakupki.gov.ru/223/dishonest/public/supplier-search.html - реестр недобросовестных поставщиков',
+                'http://fedsfm.ru/documents/terrorists-catalog-portal-act - реестр террористов и экстремистов',
+                'http://www.stroi-baza.ru/forum/index.php?showforum=46 - черный список строительных компаний',
+                'http://xn--90afdbaav0bd1afy6eub5d.xn--p1ai/ - база данных решений судов общей юрисдикции',
+                'http://www.centerdolgov.ru/ - информация о недобросовестных компаниях-должниках',
+                'http://ras.arbitr.ru/ - высший арбитражный суд РФ',
+                'https://rosreestr.ru/wps/portal/cc_information_online - справочная информация по объектам недвижимости',
+                'http://www.voditeli.ru/ - база данных о водителях грузовых автомашин',
+                'http://www.gcourts.ru/ - поисковик по судам общей юрисдикции',
+                'http://www.e-disclosure.ru/ - сервер раскрытия информации по эмитентам ценных бумаг',
+                'http://www.fssprus.ru/ - федеральная служба судебных приставов',
+                'http://rnp.fas.gov.ru/ - реестр недобросовестных поставщиков ФАС РФ',
+                'https://rosreestr.ru/wps/portal/p/cc_present/EGRN_1 - портал услуг Росреестра',
+                'http://www.notary.ru/notary/bd.html - нотариальный портал',
+                'http://allchop.ru/ - база частных охранных предприятий',
+                'http://enotpoiskun.ru/tools/codedecode/ - расшифровка кодов ИНН, КПП, ОГРН',
+                'http://polis.autoins.ru/ - проверка полисов ОСАГО',
+                'http://www.vinformer.su/ident/vin.php?setLng=ru - расшифровка VIN транспортных средств',
+                'http://fssprus.ru/iss/ip - банк данных исполнительных производств',
+                'http://fssprus.ru/iss/ip_search - реестр розыска по исполнительным производствам',
+                'http://fssprus.ru/iss/suspect_info - лица в розыске по подозрению в преступлениях',
+                'http://fssprus.ru/gosreestr_jurlic/ - реестр юридических лиц по возврату задолженности',
+                'http://opendata.fssprus.ru/ - открытые данные ФССП',
+                'http://sro.gosnadzor.ru/ - государственный реестр саморегулируемых организаций',
+                'https://rosreestr.ru/wps/portal/online_request - справочная информация по объектам недвижимости',
+                'https://rosreestr.ru/wps/portal/p/cc_present/EGRN_1 - запрос сведений ЕГРН',
+                'https://rosreestr.ru/wps/portal/cc_ib_opendata - открытые данные Росреестра',
+                'https://pkk5.rosreestr.ru/ - публичная кадастровая карта',
+                'https://www.reestr-zalogov.ru/search/index - реестр уведомлений о залоге движимого имущества',
+                'https://мвд.рф/wanted - розыск МВД',
+                'https://www.mos.ru/karta-moskvicha/services-proverka-grazhdanina-v-reestre-studentov/ - проверка в реестре студентов',
+                'http://esugi.rosim.ru - реестр федерального имущества РФ',
+                'pd.rkn.gov.ru/operators-registry - реестр операторов обработки персональных данных',
+                'bankrot.fedresurs.ru - единый федеральный реестр сведений о банкротстве',
+                'https://service.nalog.ru/zd.do - юрлица с налоговой задолженностью',
+                'https://service.nalog.ru/addrfind.do - адреса нескольких юрлиц',
+                'https://service.nalog.ru/uwsfind.do - сведения о юрлицах и ИП',
+                'https://service.nalog.ru/disqualified.do - реестр дисквалифицированных лиц',
+                'https://service.nalog.ru/disfind.do - юрлица с дисквалифицированными лицами',
+                'https://service.nalog.ru/svl.do - лица с невозможностью участия в организации',
+                'https://service.nalog.ru/mru.do - физлица - руководители нескольких юрлиц'
+            ],
+            'международные_ресурсы': [
+                'http://www.chinacheckup.com/ - верификация китайских компаний',
+                'http://www.dnb.com/products.html - Dun and Bradstreet (бизнес-информация)',
+                'http://www.imena.ua/blog/ukraine-database/ - базы данных Украины',
+                'https://www.marinetraffic.com - карта движения судов в реальном времени',
+                'https://seatracker.ru/ais.php - карта движения судов',
+                'http://shipfinder.co/ - карта движения судов',
+                'https://planefinder.net/ - отслеживание самолетов',
+                'https://www.radarbox24.com/ - отслеживание самолетов',
+                'https://de.flightaware.com/ - отслеживание самолетов',
+                'https://www.flightradar24.com - отслеживание самолетов'
+            ],
+            'соцсети_и_поиск_людей': [
+                'https://namechk.com/ - поиск по username/nickname',
+                'https://vk.com/people/ - поиск по ВКонтакте',
+                'https://ok.ru/search?q= - Одноклассники',
+                'https://www.facebook.com/search/people/?q= - Facebook',
+                'https://www.instagram.com/ - Instagram',
+                'https://t.me/ - Telegram',
+                'https://my.mail.ru/people/search - Mail.ru',
+                'https://twitter.com/search?q= - Twitter/X',
+                'https://www.linkedin.com/search/results/people/?keywords= - LinkedIn',
+                'https://sanstv.ru/photomap - поиск фото по геометкам',
+                'https://findclone.ru/ - распознавание лиц (ВКонтакте)'
+            ],
+            'поиск_по_email': [
+                'https://haveibeenpwned.com/ - проверка утечек email',
+                'https://hacked-emails.com/ - проверка взломанных email',
+                'https://ghostproject.fr/ - поиск утечек',
+                'https://weleakinfo.com/ - поиск утечек информации',
+                'https://pipl.com/ - поиск людей по email',
+                'https://leakedsource.ru/ - проверка утечек'
+            ],
+            'поиск_по_телефону': [
+                'https://phonenumber.to - поиск по номеру телефона',
+                'https://pipl.com/ - поиск людей по телефону',
+                '@get_kontakt_bot - Telegram-бот для поиска'
+            ],
+            'osint_фреймворки_и_инструменты': [
+                'http://osintframework.com/ - фреймворк OSINT инструментов',
+                'http://unwiredlabs.com - поиск местоположения базовой станции',
+                'http://xinit.ru/bs/ - поиск базовых станций сотовых операторов'
+            ],
+            'бизнес_аналитика_и_базы_данных': [
+                'http://www.fciit.ru/ - единая информационная система нотариата России',
+                'http://gradoteka.ru/ - статистическая информация по городам РФ',
+                'http://www.egrul.ru/ - поиск сведений о компаниях и директорах',
+                'http://disclosure.skrin.ru - раскрытие информации на рынке ценных бумаг',
+                'http://1prime.ru/docs/product/disclosure.html - раскрытие информации Прайм-ТАСС',
+                'https://www.cbr.ru/ - информация ЦБ по бюро кредитных историй',
+                'http://www.gks.ru/accounting_report - данные бухгалтерской отчетности',
+                'http://www.tks.ru/db/ - таможенные онлайн базы данных',
+                'http://tipodop.ru/ - каталог предприятий и организаций России',
+                'http://www.catalogfactory.org/ - организации России с финансовыми результатами',
+                'http://pravo.ru/ - справочно-информационная система нормативных актов',
+                'http://azstatus.ru/ - база данных предпринимателей РФ',
+                'http://seldon.ru/ - система работы с закупками',
+                'http://www.reestrtpprf.ru/ - реестр надежных партнеров ТПП',
+                'http://iskr-a.com/ - сообщество безопасников',
+                'http://www.ruscentr.com/ - реестр базовых организаций экономики',
+                'https://www.aips-ariadna.com/ - антикриминальная онлайн система',
+                'http://188.254.71.82/rds_ts_pub/ - реестр зарегистрированных деклараций',
+                'http://croinform.ru/index.php?page=index - сервис проверки клиентов и контрагентов',
+                'http://www.zakupki.gov.ru/epz/main/public/home.html - официальный сайт госзакупок',
+                'http://rostender.info/ - рассылка новых тендеров',
+                'http://pravo.fso.gov.ru/ - государственная система правовой информации',
+                'http://www.bicotender.ru/ - поисковая система тендеров',
+                'http://sophist.hse.ru/ - архив экономических и социологических данных',
+                'http://www.tenderguru.ru/ - национальный тендерный портал',
+                'http://www.moscowbase.ru/ - адресно-телефонные базы данных',
+                'http://www.credinform.ru/ru-RU/globas - информационно-аналитическая система ГЛОБАС',
+                'http://www.actinfo.ru/ - отраслевой бизнес-справочник предприятий',
+                'http://www.sudrf.ru/ - государственная система Правосудие',
+                'http://docs.pravo.ru/ - справочно-правовая система Право.ру',
+                'http://www.egrul.com/ - поиск по ЕГРЮЛ, ЕГРИП, ФИО',
+                'http://www.fedresurs.ru/ - единый федеральный реестр сведений',
+                'http://www.findsmi.ru/ - поиск по региональным СМИ',
+                'http://hub.opengovdata.ru/ - открытые государственные данные',
+                'http://www.ruward.ru/ - агрегатор рейтингов Рунета',
+                'http://www.b2b-energo.ru/firm_dossier/ - система рынка электроэнергетики',
+                'http://opengovdata.ru/ - открытые базы данных государственных ресурсов',
+                'http://bir.1prime.ru/ - информационно-аналитическая система Бир-аналитик',
+                'http://www.prima-inform.ru/ - доступ к информационным ресурсам',
+                'http://www.integrum.ru/ - портал для конкурентной разведки',
+                'www.spark-interfax.ru - информационный портал',
+                'https://fira.ru/ - база данных предприятий и организаций',
+                'www.skrin.ru - информация об эмитентах ценных бумаг',
+                'http://www.magelan.pro/ - портал по тендерам и закупкам',
+                'http://www.kontragent.info/ - информация о реквизитах контрагентов',
+                'http://www.ist-budget.ru/ - веб-сервис по тендерам',
+                'http://www.vuve.su/ - портал информации об организациях',
+                'http://www.disclosure.ru/index.shtml - система раскрытия информации',
+                'http://www.mosstat.ru/index.html - базы данных по ЕГРПО и ЕГРЮЛ',
+                'http://www.torg94.ru/ - ресурс по госзакупкам',
+                'http://www.k-agent.ru/ - база данных Контрагент',
+                'http://www.is-zakupki.ru/ - система государственных и коммерческих закупок',
+                'http://salespring.ru/ - база данных деловых контактов',
+                'www.multistat.ru - многофункциональный статистический портал'
+            ]
         }
 
-        # Удаление нерабочих баз данных
-        self.remove_non_working_databases()
-
-    def remove_non_working_databases(self):
-        """Удаление нерабочих баз данных"""
-        non_working_dbs = [
-            'Проверка ОСАГО',  # polis.autoins.ru
-            'ФССП',  # fssprus.ru
-            'ФССП исполнительные производства',  # fssprus.ru
-            'ФССП розыск',  # fssprus.ru
-            'База водителей',  # www.voditeli.ru
-        ]
-        
-        for db in non_working_dbs:
-            if db in self.mega_databases:
-                del self.mega_databases[db]
-                print(f"{Fore.YELLOW}🗑️ Удалена нерабочая база: {db}")
+        # Соцсети для поиска по ФИО
+        self.social_networks = {
+            'VKontakte': {
+                'url': 'https://vk.com/people/{}',
+                'search_url': 'https://vk.com/search?c%5Bq%5D={}&c%5Bsection%5D=people'
+            },
+            'Odnoklassniki': {
+                'url': 'https://ok.ru/profile/{}',
+                'search_url': 'https://ok.ru/search?q={}'
+            },
+            'Facebook': {
+                'url': 'https://www.facebook.com/{}',
+                'search_url': 'https://www.facebook.com/search/people/?q={}'
+            },
+            'Instagram': {
+                'url': 'https://www.instagram.com/{}',
+                'search_url': 'https://www.instagram.com/web/search/topsearch/?query={}'
+            },
+            'Telegram': {
+                'url': 'https://t.me/{}',
+                'search_url': 'https://t.me/{}'
+            },
+            'Twitter/X': {
+                'url': 'https://twitter.com/{}',
+                'search_url': 'https://twitter.com/search?q={}'
+            },
+            'LinkedIn': {
+                'url': 'https://www.linkedin.com/in/{}',
+                'search_url': 'https://www.linkedin.com/search/results/people/?keywords={}'
+            },
+            'Mail.ru': {
+                'url': 'https://my.mail.ru/{}',
+                'search_url': 'https://my.mail.ru/people/search?q={}'
+            }
+        }
 
     def clear_screen(self):
-        """Очистка экрана с стилизацией"""
         os.system('clear' if os.name == 'posix' else 'cls')
-        print(f"{Fore.RED}{'='*80}")
-        print(f"{Fore.RED}{Back.BLACK}    ██████╗ ███████╗██╗███╗   ██╗████████╗")
-        print(f"{Fore.RED}{Back.BLACK}    ██╔═══██╗██╔════╝██║████╗  ██║╚══██╔══╝")
-        print(f"{Fore.RED}{Back.BLACK}    ██║   ██╗███████╗██║██╔██╗ ██║   ██║   ")
-        print(f"{Fore.RED}{Back.BLACK}    ██║   ██║╚════██║██║██║╚██╗██║   ██║   ")
-        print(f"{Fore.RED}{Back.BLACK}    ╚██████╔╝███████║██║██║ ╚████║   ██║   ")
-        print(f"{Fore.RED}{Back.BLACK}     ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═══╝   ╚═╝   ")
-        print(f"{Fore.RED}{'='*80}")
-        print(f"{Fore.RED}{Style.BRIGHT}    MEGA OSINT SEARCH TOOL v2.0")
-        print(f"{Fore.RED}    🔍 {len(self.mega_databases)}+ баз данных | 🚀 Автоматический поиск")
-        print(f"{Fore.RED}    ⚡ Полный пробив | 🛡️ Анонимный режим")
-        print(f"{Fore.RED}{'='*80}")
 
-    def show_loading(self, message):
-        """Показать анимацию загрузки"""
-        print(f"\n{Fore.RED}🔄 {message}", end='', flush=True)
-        for i in range(3):
-            time.sleep(0.3)
-            print(f"{Fore.RED}.", end='', flush=True)
-        print()
+    def print_banner(self):
+        banner = f"""
+{Fore.RED}╔══════════════════════════════════════════════════════════════╗
+{Fore.RED}║{Fore.YELLOW}                  MEGA OSINT TOOL v2.0                   {Fore.RED}║
+{Fore.RED}║{Fore.CYAN}         Комплексный инструмент для поиска информации      {Fore.RED}║
+{Fore.RED}║{Fore.MAGENTA}           База данных: 200+ OSINT ресурсов             {Fore.RED}║
+{Fore.RED}╚══════════════════════════════════════════════════════════════╝
+        """
+        print(banner)
 
-    def search_database(self, db_name, query, query_type):
-        """Поиск в конкретной базе данных"""
-        results = {'database': db_name, 'query': query, 'type': query_type}
+    def show_resources_by_category(self):
+        """Показать ресурсы по категориям"""
+        print(f"\n{Fore.GREEN}📚 КАТЕГОРИИ OSINT РЕСУРСОВ:{Style.RESET_ALL}\n")
         
-        if db_name in self.mega_databases:
-            base_url = self.mega_databases[db_name]
-            try:
-                params = {}
-                
-                if query_type == 'inn':
-                    params = {'inn': query}
-                elif query_type == 'phone':
-                    params = {'phone': query, 'number': query}
-                elif query_type == 'email':
-                    params = {'email': query, 'q': query}
-                elif query_type == 'username':
-                    params = {'username': query, 'q': query}
-                elif query_type == 'company':
-                    params = {'company': query, 'q': query, 'name': query}
-                elif query_type == 'person':
-                    params = {'fio': query, 'name': query, 'q': query}
-                else:
-                    params = {'q': query, 'search': query}
-                
-                response = self.session.get(base_url, params=params, timeout=20)
-                results['status'] = response.status_code
-                results['url'] = response.url
-                
-                if response.status_code == 200:
-                    if 'text/html' in response.headers.get('content-type', ''):
-                        soup = BeautifulSoup(response.text, 'html.parser')
-                        results['title'] = soup.title.string if soup.title else None
-                        
-                        text_content = soup.get_text()
-                        results['content_preview'] = ' '.join(text_content[:300].split()) + '...'
-                        
-                    results['success'] = True
-                else:
-                    results['error'] = f"HTTP {response.status_code}"
-                    
-            except Exception as e:
-                results['error'] = str(e)
-        else:
-            results['error'] = "База данных не найдена"
+        categories = list(self.resources.keys())
+        for i, category in enumerate(categories, 1):
+            print(f"{Fore.YELLOW}{i}. {category.replace('_', ' ').title()}{Style.RESET_ALL}")
         
-        return results
-
-    def mass_search(self, query, query_type, selected_dbs=None):
-        """Массовый поиск по всем базам данных"""
-        print(f"\n{Fore.RED}🔍 Поиск '{query}' ({query_type}) по базам данных...")
-        print(f"{Fore.RED}{'='*70}")
-        
-        all_results = {}
-        
-        databases_to_search = selected_dbs if selected_dbs else list(self.mega_databases.keys())
-        
-        for db_name in databases_to_search:
-            print(f"{Fore.RED}📊 {db_name}...", end=' ', flush=True)
-            result = self.search_database(db_name, query, query_type)
-            
-            if 'error' not in result or result.get('success'):
-                all_results[db_name] = result
-                status = f"{Fore.GREEN}✅" if result.get('success') else f"{Fore.YELLOW}⚠️"
-                print(f"{status} {result.get('status', 'N/A')}")
-                
-                # Вывод подробной информации о результате
-                if result.get('success'):
-                    print(f"   {Fore.CYAN}URL: {result.get('url')}")
-                    if result.get('title'):
-                        print(f"   {Fore.CYAN}Заголовок: {result.get('title')}")
-                    if result.get('content_preview'):
-                        print(f"   {Fore.CYAN}Предпросмотр: {result.get('content_preview')}")
-                elif result.get('error'):
-                    print(f"   {Fore.RED}Ошибка: {result.get('error')}")
-                print()
+        try:
+            choice = int(input(f"\n{Fore.YELLOW}➜ Выберите категорию (1-{len(categories)}): {Style.RESET_ALL}"))
+            if 1 <= choice <= len(categories):
+                selected_category = categories[choice-1]
+                self.show_category_resources(selected_category)
             else:
-                print(f"{Fore.RED}❌ Ошибка: {result.get('error', 'Unknown')}")
+                print(f"{Fore.RED}❌ Неверный выбор!{Style.RESET_ALL}")
+        except ValueError:
+            print(f"{Fore.RED}❌ Введите число!{Style.RESET_ALL}")
+
+    def show_category_resources(self, category):
+        """Показать ресурсы выбранной категории"""
+        print(f"\n{Fore.GREEN}📖 РЕСУРСЫ: {category.replace('_', ' ').upper()}{Style.RESET_ALL}\n")
+        
+        if category in self.resources:
+            for i, resource in enumerate(self.resources[category], 1):
+                print(f"{Fore.CYAN}{i:2d}. {resource}{Style.RESET_ALL}")
             
-            time.sleep(0.3)
-        
-        return all_results
-
-    def auto_detect_query_type(self, query):
-        """Автоматическое определение типа запроса"""
-        query = str(query).strip()
-        
-        if re.match(r'^\d{10,12}$', query):
-            return 'inn', 'ИНН'
-        elif re.match(r'^\d{2} ?\d{2} ?\d{6}$', query):
-            return 'driver_license', 'Водительское удостоверение'
-        elif re.match(r'^\d{4} ?\d{6}$', query):
-            return 'passport', 'Паспорт'
-        elif '@' in query and re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', query):
-            return 'email', 'Email'
-        elif re.match(r'^\+?[78]?[ -]?\(?\d{3}\)?[ -]?\d{3}[ -]?\d{2}[ -]?\d{2}$', query.replace(' ', '')):
-            return 'phone', 'Телефон'
-        elif re.match(r'^[a-zA-Z0-9._-]+$', query) and len(query) > 2:
-            return 'username', 'Username'
-        elif re.search(r'(ООО|АО|ЗАО|ОАО|ИП|ПАО|НКО)', query, re.IGNORECASE):
-            return 'company', 'Компания'
-        elif len(query.split()) in [2, 3] and all(word[0].isupper() for word in query.split() if word):
-            return 'person', 'ФИО'
+            # Опция открытия ресурса
+            try:
+                choice = input(f"\n{Fore.YELLOW}➜ Введите номер ресурса для открытия (или Enter для возврата): {Style.RESET_ALL}")
+                if choice.isdigit():
+                    idx = int(choice) - 1
+                    if 0 <= idx < len(self.resources[category]):
+                        url = self.resources[category][idx].split(' - ')[0].strip()
+                        print(f"{Fore.GREEN}🔗 Открываю: {url}{Style.RESET_ALL}")
+                        webbrowser.open(url)
+            except:
+                pass
         else:
-            return 'general', 'Общий запрос'
+            print(f"{Fore.RED}❌ Категория не найдена!{Style.RESET_ALL}")
 
-    def comprehensive_search(self, query, db_category=None):
-        """Комплексный поиск по всем базам"""
-        query_type, type_name = self.auto_detect_query_type(query)
-        print(f"{Fore.RED}🎯 Обнаружен тип: {Fore.WHITE}{type_name}")
+    def search_social_networks(self, fio):
+        """Поиск по ФИО в социальных сетях"""
+        print(f"\n{Fore.GREEN}🔍 Поиск по ФИО в соцсетях: {fio}{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}⏳ Генерируем ссылки для поиска...{Style.RESET_ALL}\n")
         
-        if db_category == 'russian':
-            dbs_to_search = [k for k in self.mega_databases.keys() if any(x in k for x in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП'])]
-        elif db_category == 'international':
-            dbs_to_search = [k for k in self.mega_databases.keys() if k not in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП']]
-        else:
-            dbs_to_search = list(self.mega_databases.keys())
+        encoded_fio = quote(fio)
         
-        self.show_loading("Сканирование баз данных")
-        results = self.mass_search(query, query_type, dbs_to_search)
-        
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"osint_search_{timestamp}.json"
-        
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump({
-                'query': query,
-                'query_type': query_type,
-                'type_name': type_name,
-                'timestamp': timestamp,
-                'results': results
-            }, f, indent=2, ensure_ascii=False, default=str)
-        
-        print(f"\n{Fore.GREEN}💾 Результаты сохранены в: {Fore.WHITE}{filename}")
-        
-        success_count = sum(1 for r in results.values() if r.get('success'))
-        total_count = len(results)
-        print(f"{Fore.RED}📈 Статистика: {Fore.WHITE}{success_count}/{total_count} баз ответили успешно")
-        print(f"{Fore.RED}📊 Объем базы данных: {Fore.WHITE}{len(self.mega_databases)} источников")
-        
-        # Детальная статистика
-        print(f"\n{Fore.RED}📋 ДЕТАЛЬНАЯ СТАТИСТИКА:")
-        print(f"{Fore.RED}✅ Успешные запросы: {Fore.GREEN}{success_count}")
-        print(f"{Fore.RED}❌ Ошибки: {Fore.RED}{total_count - success_count}")
-        print(f"{Fore.RED}🔗 Всего баз в системе: {Fore.BLUE}{len(self.mega_databases)}")
-        
-        return results
+        for platform, data in self.social_networks.items():
+            search_url = data['search_url'].format(encoded_fio)
+            print(f"{Fore.GREEN}🔗 {platform}: {search_url}{Style.RESET_ALL}")
 
-    def show_all_databases(self):
-        """Показать все базы данных с подробной информацией"""
-        print(f"\n{Fore.RED}{'='*80}")
-        print(f"{Fore.RED}{Style.BRIGHT}ПОЛНЫЙ СПИСОК БАЗ ДАННЫХ")
-        print(f"{Fore.RED}{'='*80}")
-        print(f"{Fore.RED}📊 Общее количество: {len(self.mega_databases)} источников")
-        print(f"{Fore.RED}{'='*80}")
+    def deep_search_fio(self, fio):
+        """Глубокий поиск по ФИО"""
+        print(f"\n{Fore.GREEN}🔍 Глубокий поиск по ФИО: {fio}{Style.RESET_ALL}")
         
-        for i, (name, url) in enumerate(self.mega_databases.items(), 1):
-            print(f"{Fore.RED}{i:3d}. {Fore.CYAN}{name}")
-            print(f"    {Fore.YELLOW}URL: {url}")
-            print()
+        # Поиск в соцсетях
+        self.search_social_networks(fio)
+        
+        # Поиск в поисковых системах
+        print(f"\n{Fore.CYAN}🌐 Поиск в поисковых системах:{Style.RESET_ALL}")
+        
+        search_engines = [
+            ('Google', f'https://www.google.com/search?q="{fio}"'),
+            ('Yandex', f'https://yandex.ru/search/?text="{fio}"'),
+            ('Bing', f'https://www.bing.com/search?q="{fio}"'),
+            ('DuckDuckGo', f'https://duckduckgo.com/?q="{fio}"')
+        ]
+        
+        for engine, url in search_engines:
+            print(f"{Fore.BLUE}🔗 {engine}: {url}{Style.RESET_ALL}")
+        
+        # Специализированные сервисы
+        print(f"\n{Fore.MAGENTA}📊 Специализированные сервисы:{Style.RESET_ALL}")
+        
+        special_services = [
+            ('Новости', f'https://news.google.com/search?q={fio}'),
+            ('Форумы', f'https://www.google.com/search?q={fio}+site:forum.ru'),
+            ('Блоги', f'https://www.google.com/search?q={fio}+site:blogspot.com')
+        ]
+        
+        for service, url in special_services:
+            print(f"{Fore.CYAN}🔗 {service}: {url}{Style.RESET_ALL}")
 
-    def show_menu(self):
-        """Показать главное меню"""
-        print(f"\n{Fore.RED}{'='*60}")
-        print(f"{Fore.RED}{Style.BRIGHT}ВЫБЕРИТЕ ОПЦИЮ:")
-        print(f"{Fore.RED}{'='*60}")
-        print(f"{Fore.RED}1. 🔎 Комплексный поиск по всем базам")
-        print(f"{Fore.RED}2. 🇷🇺 Только российские гос. реестры")
-        print(f"{Fore.RED}3. 🌐 Только международные OSINT базы")
-        print(f"{Fore.RED}4. 📋 Показать все базы данных ({len(self.mega_databases)})")
-        print(f"{Fore.RED}5. 🗂️ Показать категории")
-        print(f"{Fore.RED}6. 💾 Экспорт базы данных")
-        print(f"{Fore.RED}7. 🚪 Выход")
-        print(f"{Fore.RED}{'='*60}")
-
-def main():
-    tool = MegaOSINTTool()
-    tool.clear_screen()
-    
-    while True:
-        tool.show_menu()
+    def search_phone(self, phone):
+        print(f"\n{Fore.GREEN}🔍 Поиск информации по номеру: {phone}{Style.RESET_ALL}")
         
-        choice = input(f"{Fore.RED}Ваш выбор (1-7): ").strip()
-        
-        if choice in ['1', '2', '3']:
-            query = input(f"{Fore.RED}Введите запрос (ИНН, телефон, email, ФИО и т.д.): ").strip()
-            if query:
-                if choice == '1':
-                    tool.comprehensive_search(query)
-                elif choice == '2':
-                    tool.comprehensive_search(query, 'russian')
-                elif choice == '3':
-                    tool.comprehensive_search(query, 'international')
-        
-        elif choice == '4':
-            tool.show_all_databases()
-        
-        elif choice == '5':
-            print(f"\n{Fore.RED}🗂️ КАТЕГОРИИ БАЗ ДАННЫХ:")
-            categories = {
-                '🇷🇺 Российские гос. реестры': [k for k in tool.mega_databases if any(x in k for x in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП'])],
-                '🌐 Международные OSINT': [k for k in tool.mega_databases if k not in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП']],
-                '📊 Бизнес и компании': [k for k in tool.mega_databases if any(x in k.lower() for x in ['бизнес', 'компан', 'реестр'])],
-                '👤 Персональные данные': [k for k in tool.mega_databases if any(x in k.lower() for x in ['паспорт', 'водитель', 'фио', 'инн'])]
-            }
+        try:
+            parsed = phonenumbers.parse(phone, "RU")
+            if not phonenumbers.is_valid_number(parsed):
+                print(f"{Fore.RED}❌ Неверный номер телефона{Style.RESET_ALL}")
+                return
             
-            for category, dbs in categories.items():
-                print(f"\n{Fore.RED}{category} ({len(dbs)}):")
-                for db in dbs[:5]:
-                    print(f"{Fore.RED}  • {db}")
-                if len(dbs) > 5:
-                    print(f"{Fore.RED}  • ... и еще {len(dbs)-5}")
-        
-        elif choice == '6':
-            with open('osint_databases_export.json', 'w', encoding='utf-8') as f:
-                json.dump(tool.mega_databases, f, indent=2, ensure_ascii=False)
-            print(f"{Fore.GREEN}💾 База данных экспортирована в osint_databases_export.json")
-            print(f"{Fore.GREEN}📊 Количество баз: {len(tool.mega_databases)}")
-        
-        elif choice == '7':
-            print(f"\n{Fore.RED}👋 До свидания!")
-            break
-        
-        else:
-            print(f"{Fore.RED}❌ Неверный выбор. Попробуйте снова.")
-        
-        input(f"\n{Fore.RED}Нажмите Enter для продолжения...")
-        tool.clear_screen()
+            print(f"{Fore.CYAN}📞 Форматированный номер: {phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.INTERNATIONAL)}{Style.RESET_ALL}")
+            
+            services = [
+                f"https://phonenumber.to/{phone}",
+                f"https://www.truecaller.com/search/ru/{phone}",
+                f"https://telegram.me/{phone}"
+            ]
+            
+            for service in services:
+                print(f"{Fore.YELLOW}🔗 Проверить: {service}{Style.RESET_ALL}")
+                
+        except Exception as e:
+            print(f"{Fore.RED}❌ Ошибка: {e}{Style.RESET_ALL}")
 
-if __name__ == "__main__":
-    # Убедимся что colorama установлена
-    try:
-        import colorama
-    except ImportError:
-        print("Устанавливаем colorama...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "colorama"])
-        import colorama
-        colorama.init(autoreset=True)
-    
-    main()
+    def search_email(self, email):
+        print(f"\n{Fore.GREEN}📧 Поиск информации по email: {email}{Style.RESET_ALL}")
+        
+        services = [
+            f"https://haveibeenpwned.com/account/{email}",
+            f"https://ghostproject.fr/search/{email}",
+            f"https://www.google.com/search?q=%22{email}%22",
+            f"https://yandex.ru/search/?text=%22{email}%22"
+        ]
+        
+        for service in services:
+            print(f"{Fore.YELLOW}🔗 Проверить: {service}{Style.RESET_ALL}")
+
+    def search_username(self, username):
+        print(f"\n{Fore.GREEN}👤 Поиск по username: {username}{Style.RESET_ALL}")
+        
+        services = [
+            f"https://namechk.com/{username}",
+            f"https://www.google.com/sea

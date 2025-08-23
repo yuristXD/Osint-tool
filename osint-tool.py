@@ -358,4 +358,94 @@ class MegaOSINTTool:
         
         services = [
             f"https://namechk.com/{username}",
-            f"https://www.google.com/sea
+            f"https://www.google.com/search?q=%22{username}%22",
+            f"https://yandex.ru/search/?text=%22{username}%22",
+            f"https://t.me/{username}"
+        ]
+        
+        for service in services:
+            print(f"{Fore.YELLOW}🔗 Проверить: {service}{Style.RESET_ALL}")
+
+    def show_statistics(self):
+        """Показать статистику по базе данных"""
+        total_resources = sum(len(resources) for resources in self.resources.values())
+        print(f"\n{Fore.GREEN}📊 СТАТИСТИКА БАЗЫ ДАННЫХ:{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}Всего категорий: {len(self.resources)}{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}Всего ресурсов: {total_resources}{Style.RESET_ALL}")
+        
+        for category, resources in self.resources.items():
+            print(f"{Fore.YELLOW}│ {category.replace('_', ' ').title():25s}: {len(resources):3d} ресурсов{Style.RESET_ALL}")
+
+    def main_menu(self):
+        self.clear_screen()
+        self.print_banner()
+        
+        while True:
+            print(f"\n{Fore.GREEN}🎯 ОСНОВНОЕ МЕНЮ:{Style.RESET_ALL}")
+            print(f"{Fore.CYAN}1. 🔍 Поиск по ФИО (соцсети + интернет)")
+            print(f"2. 📞 Поиск по номеру телефона")
+            print(f"3. 📧 Поиск по email")
+            print(f"4. 🏷️ Поиск по username")
+            print(f"5. 📚 Просмотр базы OSINT ресурсов")
+            print(f"6. 📊 Статистика базы данных")
+            print(f"7. 🚪 Выход{Style.RESET_ALL}")
+            
+            choice = input(f"\n{Fore.YELLOW}➜ Выберите опцию: {Style.RESET_ALL}").strip()
+            
+            if choice == '1':
+                fio = input(f"{Fore.YELLOW}Введите ФИО: {Style.RESET_ALL}").strip()
+                if fio:
+                    self.deep_search_fio(fio)
+                else:
+                    print(f"{Fore.RED}❌ Введите ФИО!{Style.RESET_ALL}")
+            elif choice == '2':
+                phone = input(f"{Fore.YELLOW}Введите номер телефона: {Style.RESET_ALL}").strip()
+                if phone:
+                    self.search_phone(phone)
+                else:
+                    print(f"{Fore.RED}❌ Введите номер телефона!{Style.RESET_ALL}")
+            elif choice == '3':
+                email = input(f"{Fore.YELLOW}Введите email: {Style.RESET_ALL}").strip()
+                if email:
+                    self.search_email(email)
+                else:
+                    print(f"{Fore.RED}❌ Введите email!{Style.RESET_ALL}")
+            elif choice == '4':
+                username = input(f"{Fore.YELLOW}Введите username: {Style.RESET_ALL}").strip()
+                if username:
+                    self.search_username(username)
+                else:
+                    print(f"{Fore.RED}❌ Введите username!{Style.RESET_ALL}")
+            elif choice == '5':
+                self.show_resources_by_category()
+            elif choice == '6':
+                self.show_statistics()
+            elif choice == '7':
+                print(f"{Fore.GREEN}👋 До свидания!{Style.RESET_ALL}")
+                break
+            else:
+                print(f"{Fore.RED}❌ Неверный выбор!{Style.RESET_ALL}")
+
+def main():
+    tool = MegaOSINTTool()
+    
+    # Проверка зависимостей
+    try:
+        import colorama
+    except ImportError:
+        print("Устанавливаем colorama...")
+        subprocess.run([sys.executable, "-m", "pip", "install", "colorama"])
+        import colorama
+        colorama.init(autoreset=True)
+    
+    try:
+        import phonenumbers
+    except ImportError:
+        print("Устанавливаем phonenumbers...")
+        subprocess.run([sys.executable, "-m", "pip", "install", "phonenumbers"])
+        import phonenumbers
+    
+    tool.main_menu()
+
+if __name__ == "__main__":
+    main()

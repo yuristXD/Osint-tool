@@ -46,19 +46,14 @@ class MegaOSINTTool:
             'Центр долгов': 'https://www.centerdolgov.ru/',
             'Арбитражный суд': 'https://ras.arbitr.ru/',
             'Росреестр': 'https://rosreestr.ru/wps/portal/cc_information_online',
-            'База водителей': 'https://www.voditeli.ru/',
             'Суды общей юрисдикции': 'https://www.gcourts.ru/',
             'Раскрытие информации': 'https://www.e-disclosure.ru/',
-            'ФССП': 'https://www.fssprus.ru/',
             'ФАС недобросовестные поставщики': 'https://rnp.fas.gov.ru/',
             'Услуги Росреестра': 'https://rosreestr.ru/wps/portal/p/cc_present/EGRN_1',
             'Нотариусы': 'https://www.notary.ru/notary/bd.html',
             'ЧОП': 'https://allchop.ru/',
             'Расшифровка кодов': 'https://enotpoiskun.ru/tools/codedecode/',
-            'Проверка ОСАГО': 'https://polis.autoins.ru/',
             'Расшифровка VIN': 'https://www.vinformer.su/ident/vin.php?setLng=ru',
-            'ФССП исполнительные производства': 'https://fssprus.ru/iss/ip',
-            'ФССП розыск': 'https://fssprus.ru/iss/ip_search',
             'Розыск преступников': 'https://fssprus.ru/iss/suspect_info',
             'Реестр коллекторов': 'https://fssprus.ru/gosreestr_jurlic/',
             'Открытые данные ФССП': 'https://opendata.fssprus.ru/',
@@ -155,7 +150,7 @@ class MegaOSINTTool:
             'Multistat': 'https://www.multistat.ru/',
             
             # 🔐 Дополнительные сервисы
-            'Роскомнадзор операторы': 'https://rkn.gov.ru/mass-communications/reestr/',
+            'Рокомнадзор операторы': 'https://rkn.gov.ru/mass-communications/reestr/',
             'Китайские компании': 'https://www.chinacheckup.com/',
             'Dun and Bradstreet': 'https://www.dnb.com/products.html',
             'Украинские базы': 'https://www.imena.ua/blog/ukraine-database/',
@@ -170,6 +165,24 @@ class MegaOSINTTool:
             'Тендерный портал': 'https://www.tenderguru.ru/',
             'Биржа контактов': 'https://salespring.ru/'
         }
+
+        # Удаление нерабочих баз данных
+        self.remove_non_working_databases()
+
+    def remove_non_working_databases(self):
+        """Удаление нерабочих баз данных"""
+        non_working_dbs = [
+            'Проверка ОСАГО',  # polis.autoins.ru
+            'ФССП',  # fssprus.ru
+            'ФССП исполнительные производства',  # fssprus.ru
+            'ФССП розыск',  # fssprus.ru
+            'База водителей',  # www.voditeli.ru
+        ]
+        
+        for db in non_working_dbs:
+            if db in self.mega_databases:
+                del self.mega_databases[db]
+                print(f"{Fore.YELLOW}🗑️ Удалена нерабочая база: {db}")
 
     def clear_screen(self):
         """Очистка экрана с стилизацией"""
@@ -249,7 +262,7 @@ class MegaOSINTTool:
         
         all_results = {}
         
-        databases_to_search = selected_dbs if selected_dbs else list(self.mega_databases.keys())[:50]  # Ограничиваем для теста
+        databases_to_search = selected_dbs if selected_dbs else list(self.mega_databases.keys())
         
         for db_name in databases_to_search:
             print(f"{Fore.RED}📊 {db_name}...", end=' ', flush=True)
@@ -259,6 +272,17 @@ class MegaOSINTTool:
                 all_results[db_name] = result
                 status = f"{Fore.GREEN}✅" if result.get('success') else f"{Fore.YELLOW}⚠️"
                 print(f"{status} {result.get('status', 'N/A')}")
+                
+                # Вывод подробной информации о результате
+                if result.get('success'):
+                    print(f"   {Fore.CYAN}URL: {result.get('url')}")
+                    if result.get('title'):
+                        print(f"   {Fore.CYAN}Заголовок: {result.get('title')}")
+                    if result.get('content_preview'):
+                        print(f"   {Fore.CYAN}Предпросмотр: {result.get('content_preview')}")
+                elif result.get('error'):
+                    print(f"   {Fore.RED}Ошибка: {result.get('error')}")
+                print()
             else:
                 print(f"{Fore.RED}❌ Ошибка: {result.get('error', 'Unknown')}")
             
@@ -299,7 +323,7 @@ class MegaOSINTTool:
         elif db_category == 'international':
             dbs_to_search = [k for k in self.mega_databases.keys() if k not in ['ФНС', 'Рос', 'Суд', 'МВД', 'ФССП']]
         else:
-            dbs_to_search = list(self.mega_databases.keys())[:30]  # Ограничение для первого запуска
+            dbs_to_search = list(self.mega_databases.keys())
         
         self.show_loading("Сканирование баз данных")
         results = self.mass_search(query, query_type, dbs_to_search)
@@ -319,9 +343,30 @@ class MegaOSINTTool:
         print(f"\n{Fore.GREEN}💾 Результаты сохранены в: {Fore.WHITE}{filename}")
         
         success_count = sum(1 for r in results.values() if r.get('success'))
-        print(f"{Fore.RED}📈 Статистика: {Fore.WHITE}{success_count}/{len(results)} баз ответили успешно")
+        total_count = len(results)
+        print(f"{Fore.RED}📈 Статистика: {Fore.WHITE}{success_count}/{total_count} баз ответили успешно")
+        print(f"{Fore.RED}📊 Объем базы данных: {Fore.WHITE}{len(self.mega_databases)} источников")
+        
+        # Детальная статистика
+        print(f"\n{Fore.RED}📋 ДЕТАЛЬНАЯ СТАТИСТИКА:")
+        print(f"{Fore.RED}✅ Успешные запросы: {Fore.GREEN}{success_count}")
+        print(f"{Fore.RED}❌ Ошибки: {Fore.RED}{total_count - success_count}")
+        print(f"{Fore.RED}🔗 Всего баз в системе: {Fore.BLUE}{len(self.mega_databases)}")
         
         return results
+
+    def show_all_databases(self):
+        """Показать все базы данных с подробной информацией"""
+        print(f"\n{Fore.RED}{'='*80}")
+        print(f"{Fore.RED}{Style.BRIGHT}ПОЛНЫЙ СПИСОК БАЗ ДАННЫХ")
+        print(f"{Fore.RED}{'='*80}")
+        print(f"{Fore.RED}📊 Общее количество: {len(self.mega_databases)} источников")
+        print(f"{Fore.RED}{'='*80}")
+        
+        for i, (name, url) in enumerate(self.mega_databases.items(), 1):
+            print(f"{Fore.RED}{i:3d}. {Fore.CYAN}{name}")
+            print(f"    {Fore.YELLOW}URL: {url}")
+            print()
 
     def show_menu(self):
         """Показать главное меню"""
@@ -331,7 +376,7 @@ class MegaOSINTTool:
         print(f"{Fore.RED}1. 🔎 Комплексный поиск по всем базам")
         print(f"{Fore.RED}2. 🇷🇺 Только российские гос. реестры")
         print(f"{Fore.RED}3. 🌐 Только международные OSINT базы")
-        print(f"{Fore.RED}4. 📋 Показать все базы данных")
+        print(f"{Fore.RED}4. 📋 Показать все базы данных ({len(self.mega_databases)})")
         print(f"{Fore.RED}5. 🗂️ Показать категории")
         print(f"{Fore.RED}6. 💾 Экспорт базы данных")
         print(f"{Fore.RED}7. 🚪 Выход")
@@ -357,10 +402,7 @@ def main():
                     tool.comprehensive_search(query, 'international')
         
         elif choice == '4':
-            print(f"\n{Fore.RED}📊 ВСЕ БАЗЫ ДАННЫХ ({len(tool.mega_databases)}):")
-            for i, (name, url) in enumerate(list(tool.mega_databases.items())[:20], 1):
-                print(f"{Fore.RED}{i:3d}. {name}")
-            print(f"{Fore.RED}   ... и еще {len(tool.mega_databases)-20} баз")
+            tool.show_all_databases()
         
         elif choice == '5':
             print(f"\n{Fore.RED}🗂️ КАТЕГОРИИ БАЗ ДАННЫХ:")
@@ -373,15 +415,16 @@ def main():
             
             for category, dbs in categories.items():
                 print(f"\n{Fore.RED}{category} ({len(dbs)}):")
-                for db in dbs[:3]:
+                for db in dbs[:5]:
                     print(f"{Fore.RED}  • {db}")
-                if len(dbs) > 3:
-                    print(f"{Fore.RED}  • ... и еще {len(dbs)-3}")
+                if len(dbs) > 5:
+                    print(f"{Fore.RED}  • ... и еще {len(dbs)-5}")
         
         elif choice == '6':
             with open('osint_databases_export.json', 'w', encoding='utf-8') as f:
                 json.dump(tool.mega_databases, f, indent=2, ensure_ascii=False)
             print(f"{Fore.GREEN}💾 База данных экспортирована в osint_databases_export.json")
+            print(f"{Fore.GREEN}📊 Количество баз: {len(tool.mega_databases)}")
         
         elif choice == '7':
             print(f"\n{Fore.RED}👋 До свидания!")
@@ -399,8 +442,8 @@ if __name__ == "__main__":
         import colorama
     except ImportError:
         print("Устанавливаем colorama...")
-        subprocess.run([sys.executable, "-m", "pip"])
-        import colorama 
+        subprocess.run([sys.executable, "-m", "pip", "install", "colorama"])
+        import colorama
         colorama.init(autoreset=True)
-
+    
     main()
